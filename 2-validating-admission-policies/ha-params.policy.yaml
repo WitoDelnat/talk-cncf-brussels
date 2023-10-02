@@ -5,6 +5,9 @@ metadata:
   name: high-available-params
 spec:
   failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
   matchConstraints:
     resourceRules:
       - apiGroups: ["*"]
@@ -12,7 +15,15 @@ spec:
         operations: ["CREATE", "UPDATE"]
         resources: ["deployments"]
   validations:
-    - expression: "object.spec.replicas <= 3"
+    - expression: "object.spec.replicas <= params.data.maxReplicas"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rule-config
+  namespace: demo
+data:
+  maxReplicas: 3
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingAdmissionPolicyBinding
@@ -22,6 +33,9 @@ spec:
   policyName: high-available-params
   validationActions:
     - Deny
+  paramRef:
+    name: rule-config
+    namespace: default
   matchResources:
     namespaceSelector:
       matchLabels:
